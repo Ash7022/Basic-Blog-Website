@@ -2,6 +2,8 @@
 
 const express = require("express");
 const bodyParser = require("body-parser");
+
+const mongoose = require("mongoose");
 const ejs = require("ejs");
 const _ = require("lodash");
 
@@ -11,60 +13,117 @@ const contactContent = "Scelerisque eleifend donec pretium vulputate sapien. Rho
 
 const app = express();
 
+mongoose.connect("mongodb://localhost:27017/BlogDB", { useNewUrlParser: true, useUnifiedTopology: true }).then(() => {
+  console.log("connected to mongoDB successfully");
+}).catch((err) => {
+  console.log(err);
+});
+
+const compose = mongoose.Schema({
+  Contentname: String,
+  Content: String
+});
+
+const Compose = new mongoose.model("Blog", compose);
+
+
+
+
+
 app.set('view engine', 'ejs');
 
-app.use(bodyParser.urlencoded({extended: true}));
+app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static("public"));
 
-let posts = [];
+app.get("/", function (req, res) {
 
-app.get("/", function(req, res){
-  res.render("home", {
-    startingContent: homeStartingContent,
-    posts: posts
-    });
+  Compose.find({}, function (err, founditem) {
+    if (err) {
+      console.log(err);
+    } else {
+      res.render("home",
+        {
+          text: homeStartingContent,
+          posts: founditem
+
+        });
+    }
+  })
+
+
 });
 
-app.get("/about", function(req, res){
-  res.render("about", {aboutContent: aboutContent});
+app.get("/contact", function (req, res) {
+  res.render("contact", { text1: contactContent });
+});
+app.get("/about", function (req, res) {
+  res.render("about", { text2: aboutContent });
 });
 
-app.get("/contact", function(req, res){
-  res.render("contact", {contactContent: contactContent});
-});
-
-app.get("/compose", function(req, res){
+app.get("/compose", function (req, res) {
   res.render("compose");
-});
+})
 
-app.post("/compose", function(req, res){
-  const post = {
-    title: req.body.postTitle,
-    content: req.body.postBody
-  };
+app.post("/compose", function (req, res) {
+  const data = new Compose({
 
-  posts.push(post);
-
-  res.redirect("/");
-
-});
-
-app.get("/posts/:postName", function(req, res){
-  const requestedTitle = _.lowerCase(req.params.postName);
-
-  posts.forEach(function(post){
-    const storedTitle = _.lowerCase(post.title);
-
-    if (storedTitle === requestedTitle) {
-      res.render("post", {
-        title: post.title,
-        content: post.content
-      });
+    Contentname: req.body.inputtxt,
+    Content: req.body.textarea
+  });
+  data.save(function (err) {
+    if (!err) {
+      res.redirect("/");
     }
   });
 
+
+
+
+
+
+
+})
+
+app.get("/:userId", function (req, res) {
+
+  let para =req.params.userId;
+
+
+  Compose.findById(para, function(err, findcontent) {
+    if(err){
+      console.log(err);
+      
+    } else{
+      res.render("post",
+      {
+        txt: findcontent.Contentname,
+        mytxt: findcontent.Content
+      });
+    }
+  })
+  
+
+  
+    
+   
+    
+
+ 
+  
+  
 });
 
-app.listen(3000, function() {
+
+
+
+
+
+
+
+
+
+
+
+app.listen(3000, function () {
   console.log("Server started on port 3000");
 });
